@@ -84,7 +84,7 @@ function Login() {
               type="tel"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              placeholder="24999999999"
+              placeholder="nome"
               required
               className="
                 w-full
