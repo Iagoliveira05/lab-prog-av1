@@ -1,7 +1,23 @@
-import "./App.css";
+import { BrowserRouter, Routes, Route } from "react-router";
+import Login from "./pages/Login";
+import Register from "./pages/register";
+
+import Produtos from "./pages/Produtos";
+import Layout from "./components/Layout";
 
 function App() {
-  return <p className="bg-red-400">App</p>;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        <Route element={<Layout />}>
+          <Route path="/produtos" element={<Produtos />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;
