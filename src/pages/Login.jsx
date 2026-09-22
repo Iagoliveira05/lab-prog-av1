@@ -1,144 +1,95 @@
 import { useEffect, useState } from "react";
 import { loginCliente } from "../services/clienteService";
 import { useNavigate, Link } from "react-router";
-
-function Login() {
+import { FiArrowRight, FiArrowUpRight, FiMail, FiUser } from "react-icons/fi";
+import AuthLayout from "../components/AuthLayout";
+export default function Login() {
   const navigate = useNavigate();
-
   const [email, setEmail] = useState("");
   const [nome, setNome] = useState("");
-
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
-
   useEffect(() => {
-    const clienteSalvo = localStorage.getItem("cliente");
-
-    if (clienteSalvo) {
-      navigate("/produtos");
-    }
-  }, []);
-
+    if (localStorage.getItem("cliente"))
+      navigate("/produtos", { replace: true });
+  }, [navigate]);
   async function handleSubmit(e) {
     e.preventDefault();
-
     setErro("");
     setLoading(true);
-
     try {
-      const cliente = await loginCliente(email, nome);
+      const cliente = await loginCliente(email.trim(), nome.trim());
       localStorage.setItem("cliente", JSON.stringify(cliente));
-
-      console.log("Cliente logado:", cliente);
-
       navigate("/produtos");
-    } catch (erro) {
-      setErro(erro.message);
+    } catch (error) {
+      setErro(error.message);
     } finally {
       setLoading(false);
     }
   }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Login</h1>
-
-          <p className="text-gray-500 mt-2">Entre na sua conta</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-
+    <AuthLayout>
+      <span className="eyebrow">
+        <span /> BOM TER VOCÊ POR AQUI
+      </span>
+      <h1>
+        Entre no
+        <br />
+        seu <span className="text-accent">fluxo.</span>
+      </h1>
+      <p className="auth-description">
+        Seu dia mais leve começa com tudo organizado.
+      </p>
+      <form onSubmit={handleSubmit} className="auth-form">
+        <label className="field">
+          E-mail
+          <div className="input-icon">
+            <FiMail />
             <input
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
+              placeholder="voce@exemplo.com"
               required
-              className="
-                w-full
-                px-4
-                py-3
-                border
-                border-gray-300
-                rounded-lg
-                outline-none
-                focus:ring-2
-                focus:ring-blue-500
-                focus:border-transparent
-              "
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome
-            </label>
-
+        </label>
+        <label className="field">
+          Nome
+          <div className="input-icon">
+            <FiUser />
             <input
-              type="tel"
+              autoComplete="name"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              placeholder="nome"
+              placeholder="Como você se cadastrou"
               required
-              className="
-                w-full
-                px-4
-                py-3
-                border
-                border-gray-300
-                rounded-lg
-                outline-none
-                focus:ring-2
-                focus:ring-blue-500
-                focus:border-transparent
-              "
             />
           </div>
-
-          {erro && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3">
-              {erro}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="
-              w-full
-              bg-blue-600
-              text-white
-              py-3
-              rounded-lg
-              font-medium
-              hover:bg-blue-700
-              transition
-              disabled:opacity-50
-              disabled:cursor-not-allowed
-            "
-          >
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Não possui uma conta?{" "}
-          <Link
-            to="/register"
-            className="text-blue-600 font-medium hover:underline"
-          >
-            Criar conta
-          </Link>
-        </p>
+        </label>
+        {erro && (
+          <div className="notice error" role="alert">
+            {erro}
+          </div>
+        )}
+        <button
+          className="button button-primary auth-submit"
+          disabled={loading}
+        >
+          {loading ? "Entrando…" : "Entrar na minha conta"}
+          <FiArrowRight />
+        </button>
+      </form>
+      <div className="auth-divider">
+        <span>SEU PRÓXIMO PASSO COMEÇA AQUI</span>
       </div>
-    </div>
+      <p className="auth-switch">
+        Ainda não tem uma conta?{" "}
+        <Link to="/register">
+          Comece agora <FiArrowUpRight />
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }
-
-export default Login;
