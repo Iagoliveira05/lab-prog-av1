@@ -1,216 +1,132 @@
 import { useState } from "react";
 import { cadastrarCliente } from "../services/clienteService";
 import { useNavigate, Link } from "react-router";
-
-function Register() {
+import { FiArrowRight, FiArrowLeft } from "react-icons/fi";
+import AuthLayout from "../components/AuthLayout";
+export default function Register() {
   const navigate = useNavigate();
-
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [cidade, setCidade] = useState("");
-  const [estado, setEstado] = useState("");
-
+  const [dados, setDados] = useState({
+    nome: "",
+    email: "",
+    telefone: "",
+    cidade: "",
+    estado: "",
+  });
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
-
+  function change(e) {
+    setDados({
+      ...dados,
+      [e.target.name]:
+        e.target.name === "estado"
+          ? e.target.value.toUpperCase()
+          : e.target.value,
+    });
+  }
   async function handleSubmit(e) {
     e.preventDefault();
-
     setErro("");
     setLoading(true);
-
-    const cliente = {
-      nome,
-      email,
-      telefone,
-      cidade,
-      estado,
-    };
-
     try {
-      const clienteCriado = await cadastrarCliente(cliente);
-
-      console.log("Cliente criado:", clienteCriado);
-
+      await cadastrarCliente(dados);
       navigate("/");
-    } catch (error) {
-      console.error(error);
-      setErro("Não foi possível criar sua conta.");
+    } catch {
+      setErro("Não foi possível criar sua conta. Tente novamente.");
     } finally {
       setLoading(false);
     }
   }
-
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Criar conta</h1>
-
-          <p className="text-gray-500 mt-2">Preencha seus dados para começar</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Nome */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome
-            </label>
-
+    <AuthLayout register>
+      <Link className="back-link" to="/">
+        <FiArrowLeft /> Voltar para entrar
+      </Link>
+      <span className="eyebrow">
+        <span /> UM NOVO COMEÇO
+      </span>
+      <h1>
+        Abra espaço
+        <br />
+        para o <span className="text-accent">novo.</span>
+      </h1>
+      <p className="auth-description">Crie sua conta e encontre seu ritmo.</p>
+      <form className="auth-form register-form" onSubmit={handleSubmit}>
+        <label className="field">
+          Nome completo
+          <input
+            name="nome"
+            autoComplete="name"
+            value={dados.nome}
+            onChange={change}
+            placeholder="Como podemos chamar você?"
+            required
+          />
+        </label>
+        <label className="field">
+          E-mail
+          <input
+            name="email"
+            type="email"
+            autoComplete="email"
+            value={dados.email}
+            onChange={change}
+            placeholder="voce@exemplo.com"
+            required
+          />
+        </label>
+        <label className="field">
+          Telefone <span className="optional">opcional</span>
+          <input
+            name="telefone"
+            type="tel"
+            autoComplete="tel"
+            value={dados.telefone}
+            onChange={change}
+            placeholder="(00) 00000-0000"
+          />
+        </label>
+        <div className="city-fields">
+          <label className="field">
+            Cidade <span className="optional">opcional</span>
             <input
-              type="text"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="Digite seu nome"
-              required
-              className="
-                w-full px-4 py-3
-                border border-gray-300
-                rounded-lg
-                outline-none
-                focus:ring-2 focus:ring-blue-500
-                focus:border-transparent
-                transition
-              "
+              name="cidade"
+              autoComplete="address-level2"
+              value={dados.cidade}
+              onChange={change}
+              placeholder="Sua cidade"
             />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-
+          </label>
+          <label className="field">
+            Estado
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              required
-              className="
-                w-full px-4 py-3
-                border border-gray-300
-                rounded-lg
-                outline-none
-                focus:ring-2 focus:ring-blue-500
-                focus:border-transparent
-                transition
-              "
-            />
-          </div>
-
-          {/* Telefone */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Telefone
-            </label>
-
-            <input
-              type="tel"
-              value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
-              placeholder="24999999999"
-              className="
-                w-full px-4 py-3
-                border border-gray-300
-                rounded-lg
-                outline-none
-                focus:ring-2 focus:ring-blue-500
-                focus:border-transparent
-                transition
-              "
-            />
-          </div>
-
-          {/* Cidade */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cidade
-            </label>
-
-            <input
-              type="text"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-              placeholder="Digite sua cidade"
-              className="
-                w-full px-4 py-3
-                border border-gray-300
-                rounded-lg
-                outline-none
-                focus:ring-2 focus:ring-blue-500
-                focus:border-transparent
-                transition
-              "
-            />
-          </div>
-
-          {/* Estado */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado
-            </label>
-
-            <input
-              type="text"
-              value={estado}
-              onChange={(e) => setEstado(e.target.value.toUpperCase())}
-              placeholder="RJ"
+              name="estado"
+              autoComplete="address-level1"
+              value={dados.estado}
+              onChange={change}
+              placeholder="UF"
               maxLength={2}
-              className="
-                w-full px-4 py-3
-                border border-gray-300
-                rounded-lg
-                outline-none
-                focus:ring-2 focus:ring-blue-500
-                focus:border-transparent
-                transition
-              "
             />
+          </label>
+        </div>
+        {erro && (
+          <div className="notice error" role="alert">
+            {erro}
           </div>
-
-          {/* Erro */}
-          {erro && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3">
-              {erro}
-            </div>
-          )}
-
-          {/* Botão */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="
-              w-full
-              bg-blue-600
-              text-white
-              font-medium
-              py-3
-              rounded-lg
-              hover:bg-blue-700
-              active:bg-blue-800
-              transition
-              disabled:opacity-50
-              disabled:cursor-not-allowed
-            "
-          >
-            {loading ? "Criando conta..." : "Criar conta"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Já possui uma conta?{" "}
-          <Link
-            to="/"
-            className="text-blue-600 font-medium hover:text-blue-700 hover:underline"
-          >
-            Entrar
-          </Link>
-        </p>
-      </div>
-    </div>
+        )}
+        <button
+          className="button button-primary auth-submit"
+          disabled={loading}
+        >
+          {loading ? "Criando sua conta…" : "Criar minha conta"}
+          <FiArrowRight />
+        </button>
+      </form>
+      <p className="auth-switch">
+        Já faz parte?{" "}
+        <Link to="/">
+          Entre na sua conta <FiArrowRight />
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }
-
-export default Register;

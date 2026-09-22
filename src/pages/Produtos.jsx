@@ -1,485 +1,326 @@
-import { useEffect, useState } from "react";
-import { FaPen, FaTrash, FaPlus } from "react-icons/fa6";
-
+import { useEffect, useState, useCallback } from "react";
+import {
+  FiBox,
+  FiLayers,
+  FiDollarSign,
+  FiPlus,
+  FiEdit2,
+  FiTrash2,
+  FiArrowUpRight,
+  FiPackage,
+} from "react-icons/fi";
 import {
   listarProdutos,
   cadastrarProduto,
   atualizarProduto,
   excluirProduto,
 } from "../services/produtoService";
+import { EmptyState, Modal, Notice, Stat } from "../components/UI";
 
-function Produtos() {
+const inicial = {
+  nome: "",
+  descricao: "",
+  preco: "",
+  quantidadeEstoque: "",
+  categoria: "",
+  marca: "",
+  cor: "",
+  peso: "",
+  altura: "",
+  largura: "",
+  profundidade: "",
+  codigoBarras: "",
+  fabricante: "",
+  ativo: true,
+};
+const numericos = [
+  "preco",
+  "quantidadeEstoque",
+  "peso",
+  "altura",
+  "largura",
+  "profundidade",
+];
+const moeda = (value) =>
+  Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+const campos = [
+  ["nome", "Nome do produto", "Ex.: Caderno pontilhado", true],
+  ["categoria", "Categoria", "Ex.: Papelaria"],
+  ["preco", "Preço (R$)", "0,00", true],
+  ["quantidadeEstoque", "Quantidade em estoque", "0", true],
+  ["marca", "Marca", "Marca do produto"],
+  ["fabricante", "Fabricante", "Nome do fabricante"],
+  ["cor", "Cor", "Ex.: Preto"],
+  ["codigoBarras", "Código de barras", "Código do produto"],
+  ["peso", "Peso", "0"],
+  ["altura", "Altura", "0"],
+  ["largura", "Largura", "0"],
+  ["profundidade", "Profundidade", "0"],
+];
+
+export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
-
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
+  const [formulario, setFormulario] = useState(null);
+  const [formErro, setFormErro] = useState("");
   const [idEditando, setIdEditando] = useState(null);
-
-  const [nome, setNome] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [preco, setPreco] = useState("");
-  const [quantidadeEstoque, setQuantidadeEstoque] = useState("");
-  const [categoria, setCategoria] = useState("");
-  const [marca, setMarca] = useState("");
-  const [cor, setCor] = useState("");
-  const [peso, setPeso] = useState("");
-  const [altura, setAltura] = useState("");
-  const [largura, setLargura] = useState("");
-  const [profundidade, setProfundidade] = useState("");
-  const [codigoBarras, setCodigoBarras] = useState("");
-  const [fabricante, setFabricante] = useState("");
-  const [ativo, setAtivo] = useState(true);
-
+  const [excluindo, setExcluindo] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const carregarProdutos = useCallback(async () => {
+    setLoading(true);
+    setErro("");
+    try {
+      setProdutos(await listarProdutos());
+    } catch (error) {
+      setErro(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
   useEffect(() => {
-    carregarProdutos();
+    let active = true;
+    listarProdutos()
+      .then((dados) => {
+        if (active) setProdutos(dados);
+      })
+      .catch((error) => {
+        if (active) setErro(error.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  async function carregarProdutos() {
-    try {
-      const dados = await listarProdutos();
-      setProdutos(dados);
-    } catch (erro) {
-      alert(erro.message);
-    }
+  function abrirFormulario(produto) {
+    setIdEditando(produto?.id ?? null);
+    setFormErro("");
+    setFormulario(
+      produto
+        ? Object.fromEntries(
+            Object.keys(inicial).map((key) => [
+              key,
+              produto[key] ?? inicial[key],
+            ]),
+          )
+        : { ...inicial },
+    );
   }
-
-  function limparFormulario() {
-    setNome("");
-    setDescricao("");
-    setPreco("");
-    setQuantidadeEstoque("");
-    setCategoria("");
-    setMarca("");
-    setCor("");
-    setPeso("");
-    setAltura("");
-    setLargura("");
-    setProfundidade("");
-    setCodigoBarras("");
-    setFabricante("");
-    setAtivo(true);
-
-    setIdEditando(null);
+  function fecharFormulario() {
+    if (!saving) setFormulario(null);
   }
-
-  function abrirCadastro() {
-    limparFormulario();
-    setMostrarFormulario(true);
-  }
-
-  function editarProduto(produto) {
-    setNome(produto.nome);
-    setDescricao(produto.descricao);
-    setPreco(produto.preco);
-    setQuantidadeEstoque(produto.quantidadeEstoque);
-    setCategoria(produto.categoria);
-    setMarca(produto.marca);
-    setCor(produto.cor);
-    setPeso(produto.peso);
-    setAltura(produto.altura);
-    setLargura(produto.largura);
-    setProfundidade(produto.profundidade);
-    setCodigoBarras(produto.codigoBarras);
-    setFabricante(produto.fabricante);
-    setAtivo(produto.ativo);
-
-    setIdEditando(produto.id);
-    setMostrarFormulario(true);
-  }
-
-  async function salvarProduto(e) {
+  async function salvar(e) {
     e.preventDefault();
-
-    const produto = {
-      nome,
-      descricao,
-      preco: Number(preco),
-      quantidadeEstoque: Number(quantidadeEstoque),
-      categoria,
-      marca,
-      cor,
-      peso: Number(peso),
-      altura: Number(altura),
-      largura: Number(largura),
-      profundidade: Number(profundidade),
-      codigoBarras,
-      fabricante,
-      ativo,
-    };
-
+    setSaving(true);
+    setFormErro("");
+    setSucesso("");
+    const produto = { ...formulario };
+    numericos.forEach((key) => {
+      produto[key] = Number(produto[key]);
+    });
     try {
-      if (idEditando) {
-        await atualizarProduto(idEditando, produto);
-      } else {
-        await cadastrarProduto(produto);
-      }
-
-      limparFormulario();
-      setMostrarFormulario(false);
-
-      carregarProdutos();
-    } catch (erro) {
-      alert(erro.message);
+      if (idEditando !== null) await atualizarProduto(idEditando, produto);
+      else await cadastrarProduto(produto);
+      setFormulario(null);
+      setSucesso(
+        idEditando !== null
+          ? "Alterações salvas. Tudo atualizado!"
+          : "Produto cadastrado. Seu catálogo está crescendo!",
+      );
+      await carregarProdutos();
+    } catch (error) {
+      setFormErro(error.message);
+    } finally {
+      setSaving(false);
     }
   }
-
-  async function removerProduto(id) {
-    const confirmar = confirm("Deseja realmente excluir este produto?");
-
-    if (!confirmar) return;
-
+  async function remover() {
+    setSaving(true);
+    setFormErro("");
+    setSucesso("");
     try {
-      await excluirProduto(id);
-      carregarProdutos();
-    } catch (erro) {
-      alert(erro.message);
+      await excluirProduto(excluindo.id);
+      setExcluindo(null);
+      setSucesso("Produto excluído.");
+      await carregarProdutos();
+    } catch (error) {
+      setFormErro(error.message);
+    } finally {
+      setSaving(false);
     }
   }
+  const unidades = produtos.reduce(
+    (sum, p) => sum + Number(p.quantidadeEstoque || 0),
+    0,
+  );
+  const valor = produtos.reduce(
+    (sum, p) => sum + Number(p.preco || 0) * Number(p.quantidadeEstoque || 0),
+    0,
+  );
+  const ativos = produtos.filter((p) => p.ativo).length;
+  const statValue = (value) => (loading || erro ? "—" : value);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* TÍTULO */}
-
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Produtos</h1>
-
-            <p className="text-gray-500 mt-1">Gerencie seus produtos</p>
-          </div>
-
-          <button
-            onClick={abrirCadastro}
-            className="
-              flex items-center gap-2
-              bg-blue-600 text-white
-              px-5 py-2.5
-              rounded-lg
-              hover:bg-blue-700
-              transition
-            "
-          >
-            <FaPlus />
-            Novo produto
-          </button>
+    <>
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">TUDO EM SEU LUGAR</span>
+          <h1>
+            Seus produtos<span className="text-accent">.</span>
+          </h1>
+          <p>Uma visão clara de tudo o que você tem.</p>
         </div>
-
-        {/* FORMULÁRIO */}
-
-        {mostrarFormulario && (
-          <form
-            onSubmit={salvarProduto}
-            className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6"
-          >
-            <h2 className="text-xl font-semibold text-gray-800 mb-5">
-              {idEditando ? "Editar produto" : "Cadastrar produto"}
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Nome"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-
-              <input
-                type="text"
-                placeholder="Categoria"
-                value={categoria}
-                onChange={(e) => setCategoria(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="text"
-                placeholder="Descrição"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Preço"
-                value={preco}
-                onChange={(e) => setPreco(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-
-              <input
-                type="number"
-                placeholder="Quantidade em estoque"
-                value={quantidadeEstoque}
-                onChange={(e) => setQuantidadeEstoque(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-
-              <input
-                type="text"
-                placeholder="Marca"
-                value={marca}
-                onChange={(e) => setMarca(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="text"
-                placeholder="Cor"
-                value={cor}
-                onChange={(e) => setCor(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="text"
-                placeholder="Fabricante"
-                value={fabricante}
-                onChange={(e) => setFabricante(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Peso"
-                value={peso}
-                onChange={(e) => setPeso(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Altura"
-                value={altura}
-                onChange={(e) => setAltura(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Largura"
-                value={largura}
-                onChange={(e) => setLargura(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Profundidade"
-                value={profundidade}
-                onChange={(e) => setProfundidade(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <input
-                type="text"
-                placeholder="Código de barras"
-                value={codigoBarras}
-                onChange={(e) => setCodigoBarras(e.target.value)}
-                className="border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* ATIVO */}
-
-            <div className="flex items-center gap-2 mt-5">
-              <input
-                type="checkbox"
-                checked={ativo}
-                onChange={(e) => setAtivo(e.target.checked)}
-                className="w-4 h-4"
-              />
-
-              <span className="text-gray-700">Produto ativo</span>
-            </div>
-
-            {/* BOTÕES */}
-
-            <div className="flex gap-3 mt-6">
-              <button
-                type="submit"
-                className="
-                  bg-blue-600
-                  text-white
-                  px-5 py-2.5
-                  rounded-lg
-                  hover:bg-blue-700
-                  transition
-                "
-              >
-                {idEditando ? "Salvar alterações" : "Cadastrar"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  limparFormulario();
-                  setMostrarFormulario(false);
-                }}
-                className="
-                  bg-gray-200
-                  text-gray-700
-                  px-5 py-2.5
-                  rounded-lg
-                  hover:bg-gray-300
-                  transition
-                "
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* TABELA */}
-
-        <div
-          className="
-          bg-white
-          rounded-xl
-          shadow-sm
-          border border-gray-200
-          overflow-hidden
-        "
+        <button
+          className="button button-primary"
+          onClick={() => abrirFormulario()}
         >
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="font-semibold text-gray-800">
-              Produtos cadastrados
-            </h2>
-
-            <p className="text-sm text-gray-500">
-              {produtos.length} produto(s)
-            </p>
+          <FiPlus /> Novo produto
+        </button>
+      </div>
+      <div className="stats-grid">
+        <Stat
+          label="Produtos cadastrados"
+          value={statValue(String(produtos.length).padStart(2, "0"))}
+          icon={FiBox}
+          detail={
+            loading || erro
+              ? "Seu catálogo de produtos"
+              : `${ativos} ativos no catálogo`
+          }
+          accent
+        />
+        <Stat
+          label="Unidades em estoque"
+          value={statValue(unidades.toLocaleString("pt-BR"))}
+          icon={FiLayers}
+          detail="Soma de todos os produtos"
+        />
+        <Stat
+          label="Valor do estoque"
+          value={statValue(moeda(valor))}
+          icon={FiDollarSign}
+          detail="Preço × quantidade disponível"
+        />
+      </div>
+      <Notice error={erro} success={sucesso} onRetry={carregarProdutos} />
+      <section
+        className="panel product-panel"
+        aria-labelledby="catalogo-titulo"
+      >
+        <div className="panel-heading">
+          <div>
+            <span className="section-icon">
+              <FiPackage />
+            </span>
+            <h2 id="catalogo-titulo">Seu catálogo</h2>
+            <span className="count-badge">
+              {loading || erro ? "—" : produtos.length}
+            </span>
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr className="text-sm text-gray-600">
-                  <th className="text-left px-6 py-4 font-semibold">Produto</th>
-
-                  <th className="text-left px-6 py-4 font-semibold">
-                    Categoria
-                  </th>
-
-                  <th className="text-left px-6 py-4 font-semibold">Preço</th>
-
-                  <th className="text-center px-6 py-4 font-semibold">
-                    Estoque
-                  </th>
-
-                  <th className="text-center px-6 py-4 font-semibold">
-                    Status
-                  </th>
-
-                  <th className="text-center px-6 py-4 font-semibold">Ações</th>
+          <span className="panel-caption">Os detalhes fazem a diferença.</span>
+        </div>
+        {loading ? (
+          <div className="loading-state" role="status">
+            <span className="spinner" /> Buscando seus produtos…
+          </div>
+        ) : erro ? (
+          <EmptyState
+            icon={FiBox}
+            title="Não conseguimos carregar seu catálogo"
+            description="Tente novamente para ver seus produtos."
+          />
+        ) : produtos.length === 0 ? (
+          <EmptyState
+            icon={FiBox}
+            title="Grandes coisas começam com o primeiro produto."
+            description="Adicione um produto e dê vida ao seu catálogo."
+          >
+            <button
+              className="button button-secondary"
+              onClick={() => abrirFormulario()}
+            >
+              Adicionar primeiro produto <FiArrowUpRight />
+            </button>
+          </EmptyState>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Categoria</th>
+                  <th>Preço</th>
+                  <th>Estoque</th>
+                  <th>Status</th>
+                  <th className="align-right">Ações</th>
                 </tr>
               </thead>
-
-              <tbody className="divide-y divide-gray-100">
-                {produtos.map((produto) => (
-                  <tr key={produto.id} className="hover:bg-gray-50 transition">
-                    {/* PRODUTO */}
-
-                    <td className="px-6 py-4">
-                      <p className="font-semibold text-gray-800">
-                        {produto.nome}
-                      </p>
-
-                      <p className="text-sm text-gray-500">{produto.marca}</p>
-                    </td>
-
-                    {/* CATEGORIA */}
-
-                    <td className="px-6 py-4 text-gray-600">
-                      {produto.categoria}
-                    </td>
-
-                    {/* PREÇO */}
-
-                    <td className="px-6 py-4 font-medium text-gray-800">
-                      {Number(produto.preco).toLocaleString("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      })}
-                    </td>
-
-                    {/* ESTOQUE */}
-
-                    <td className="px-6 py-4 text-center text-gray-600">
-                      {produto.quantidadeEstoque}
-                    </td>
-
-                    {/* STATUS */}
-
-                    <td className="px-6 py-4 text-center">
-                      {produto.ativo ? (
-                        <span
-                          className="
-                          bg-green-100
-                          text-green-700
-                          px-3 py-1
-                          rounded-full
-                          text-xs
-                          font-medium
-                        "
-                        >
-                          Ativo
+              <tbody>
+                {produtos.map((produto, index) => (
+                  <tr key={produto.id}>
+                    <td>
+                      <div className="product-name">
+                        <span className={`product-symbol symbol-${index % 3}`}>
+                          <FiBox />
                         </span>
-                      ) : (
-                        <span
-                          className="
-                          bg-red-100
-                          text-red-700
-                          px-3 py-1
-                          rounded-full
-                          text-xs
-                          font-medium
-                        "
-                        >
-                          Inativo
-                        </span>
-                      )}
+                        <div>
+                          <strong>{produto.nome}</strong>
+                          <span>{produto.marca || "Sem marca"}</span>
+                        </div>
+                      </div>
                     </td>
-
-                    {/* AÇÕES */}
-
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-2">
+                    <td>
+                      <span className="category-label">
+                        {produto.categoria || "Sem categoria"}
+                      </span>
+                    </td>
+                    <td className="price-cell">{moeda(produto.preco)}</td>
+                    <td>
+                      <span
+                        className={
+                          Number(produto.quantidadeEstoque) === 0
+                            ? "stock-zero"
+                            : ""
+                        }
+                      >
+                        {produto.quantidadeEstoque}{" "}
+                        <span className="muted">un.</span>
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={`status-badge ${produto.ativo ? "is-active" : "is-inactive"}`}
+                      >
+                        {produto.ativo ? "Ativo" : "Inativo"}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="row-actions">
                         <button
-                          onClick={() => editarProduto(produto)}
-                          title="Editar"
-                          className="
-                            p-2
-                            rounded-lg
-                            text-blue-600
-                            hover:bg-blue-50
-                            transition
-                          "
+                          className="icon-button"
+                          onClick={() => abrirFormulario(produto)}
+                          aria-label={`Editar ${produto.nome}`}
+                          title="Editar produto"
                         >
-                          <FaPen />
+                          <FiEdit2 />
                         </button>
-
                         <button
-                          onClick={() => removerProduto(produto.id)}
-                          title="Excluir"
-                          className="
-                            p-2
-                            rounded-lg
-                            text-red-600
-                            hover:bg-red-50
-                            transition
-                          "
+                          className="icon-button danger"
+                          onClick={() => {
+                            setFormErro("");
+                            setExcluindo(produto);
+                          }}
+                          aria-label={`Excluir ${produto.nome}`}
+                          title="Excluir produto"
                         >
-                          <FaTrash />
+                          <FiTrash2 />
                         </button>
                       </div>
                     </td>
@@ -488,16 +329,129 @@ function Produtos() {
               </tbody>
             </table>
           </div>
-
-          {produtos.length === 0 && (
-            <p className="text-center text-gray-500 py-10">
-              Nenhum produto cadastrado.
-            </p>
-          )}
+        )}
+        <div className="panel-footer">
+          <span>
+            {loading
+              ? "Carregando catálogo"
+              : erro
+                ? "Catálogo indisponível"
+                : `${produtos.length} produto${produtos.length === 1 ? "" : "s"} no seu espaço`}
+          </span>
+          <FiBox />
         </div>
-      </div>
-    </div>
+      </section>
+      {formulario && (
+        <Modal
+          title={idEditando !== null ? "Editar produto" : "Um novo produto."}
+          onClose={fecharFormulario}
+          wide
+        >
+          <form onSubmit={salvar} className="product-form">
+            <p className="form-intro">
+              Preencha os detalhes. Campos com * são obrigatórios.
+            </p>
+            <div className="form-grid">
+              {campos.map(([key, label, placeholder, required]) => (
+                <label className="field" key={key}>
+                  {label}
+                  {required ? " *" : ""}
+                  <input
+                    name={key}
+                    type={numericos.includes(key) ? "number" : "text"}
+                    min={numericos.includes(key) ? "0" : undefined}
+                    step={
+                      key === "quantidadeEstoque"
+                        ? "1"
+                        : numericos.includes(key)
+                          ? "0.01"
+                          : undefined
+                    }
+                    required={required}
+                    placeholder={placeholder}
+                    value={formulario[key]}
+                    onChange={(e) =>
+                      setFormulario({ ...formulario, [key]: e.target.value })
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+            <label className="field description-field">
+              Descrição
+              <textarea
+                rows={3}
+                value={formulario.descricao}
+                onChange={(e) =>
+                  setFormulario({ ...formulario, descricao: e.target.value })
+                }
+                placeholder="O que torna esse produto especial?"
+              />
+            </label>
+            <label className="checkbox-field">
+              <input
+                type="checkbox"
+                checked={formulario.ativo}
+                onChange={(e) =>
+                  setFormulario({ ...formulario, ativo: e.target.checked })
+                }
+              />
+              <span>Produto ativo no catálogo</span>
+            </label>
+            <Notice error={formErro} />
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={fecharFormulario}
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+              <button className="button button-primary" disabled={saving}>
+                {saving
+                  ? "Salvando…"
+                  : idEditando !== null
+                    ? "Salvar alterações"
+                    : "Cadastrar produto"}
+                <FiArrowUpRight />
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {excluindo && (
+        <Modal
+          title="Excluir produto?"
+          onClose={() => {
+            if (!saving) setExcluindo(null);
+          }}
+        >
+          <div className="confirm-body">
+            <p>
+              O produto <strong>{excluindo.nome}</strong> será removido do
+              catálogo. Essa ação não pode ser desfeita.
+            </p>
+            <Notice error={formErro} />
+            <div className="modal-actions">
+              <button
+                className="button button-secondary"
+                disabled={saving}
+                onClick={() => setExcluindo(null)}
+              >
+                Manter produto
+              </button>
+              <button
+                className="button button-danger"
+                disabled={saving}
+                onClick={remover}
+              >
+                {saving ? "Excluindo…" : "Sim, excluir"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
-
-export default Produtos;
